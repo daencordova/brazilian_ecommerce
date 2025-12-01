@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool, Result as SqlxResult, migrate::MigrateError, postgres::PgPoolOptions};
 use std::{env, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::signal;
+use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use tracing::{error, info, instrument};
 use validator::Validate;
 
@@ -70,6 +71,13 @@ pub struct PaginatedResponse<T> {
 pub struct PaginationParams {
     pub page: Option<u32>,
     pub page_size: Option<u32>,
+}
+
+/// Structure to hold environment-specific CORS settings
+pub struct CorsConfig {
+    pub allowed_origins: Vec<String>,
+    pub allow_credentials: bool,
+    pub max_age_seconds: u64,
 }
 
 // --- Error Handling ---
@@ -430,6 +438,9 @@ async fn main() -> std::result::Result<(), AppError> {
 
     let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
 
+    let cors_config = load_cors_config()?;
+    let cors_layer = create_cors_layer(cors_config);
+
     info!("Connecting to database...");
 
     let pool = PgPoolOptions::new()
@@ -441,10 +452,8 @@ async fn main() -> std::result::Result<(), AppError> {
 
     info!("Database connection pool created.");
 
-    // Run migrations
     sqlx::migrate!("./migrations").run(&pool).await?;
 
-    // Dependency Injection
     let pg_repository = PgCustomerRepository::new(pool);
     let customer_service = CustomerService::new(Arc::new(pg_repository));
     let app_state = AppState { customer_service };
@@ -455,7 +464,8 @@ async fn main() -> std::result::Result<(), AppError> {
         .route("/customers/{id}", get(get_customer_by_id_handler))
         .route("/customers/{id}", put(update_customer_handler))
         .route("/customers/{id}", delete(delete_customer_handler))
-        .with_state(app_state);
+        .with_state(app_state)
+        .layer(cors_layer);
 
     let addr: SocketAddr = format!("0.0.0.0:{}", port)
         .parse()
@@ -467,7 +477,6 @@ async fn main() -> std::result::Result<(), AppError> {
         .await
         .map_err(|e| AppError::ConfigError(format!("Failed to bind TCP listener: {}", e)))?;
 
-    // Serve with graceful shutdown
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await
@@ -476,7 +485,6 @@ async fn main() -> std::result::Result<(), AppError> {
     Ok(())
 }
 
-// Graceful shutdown handler for Ctrl+C and SIGTERM
 async fn shutdown_signal() {
     let ctrl_c = async {
         signal::ctrl_c()
@@ -501,4 +509,63 @@ async fn shutdown_signal() {
     }
 
     info!("Signal received, starting graceful shutdown");
+}
+
+fn load_cors_config() -> AppResult<CorsConfig> {
+    let app_env = env::var("APP_ENV").unwrap_or_else(|_| "development".to_string());
+
+    let default_origins = match app_env.as_str() {
+        "production" | "staging" => env::var("CORS_ALLOWED_ORIGINS")
+            .map(|s| s.split(',').map(|o| o.trim().to_string()).collect())
+            .map_err(|_| {
+                AppError::ConfigError(
+                    "CORS_ALLOWED_ORIGINS must be set for production/staging.".to_string(),
+                )
+            })?,
+        _ => {
+            info!(
+                "Running in {} mode. CORS set to allow all origins.",
+                app_env
+            );
+            vec!["*".to_string()]
+        }
+    };
+
+    let allow_credentials = env::var("CORS_ALLOW_CREDENTIALS")
+        .map(|s| s.to_lowercase() == "true")
+        .unwrap_or(true);
+
+    let max_age_seconds = env::var("CORS_MAX_AGE_SECONDS")
+        .unwrap_or_else(|_| "600".to_string())
+        .parse()
+        .unwrap_or(600);
+
+    Ok(CorsConfig {
+        allowed_origins: default_origins,
+        allow_credentials,
+        max_age_seconds,
+    })
+}
+
+fn create_cors_layer(config: CorsConfig) -> CorsLayer {
+    let allowed_origins = if config.allowed_origins.contains(&"*".to_string()) {
+        AllowOrigin::any()
+    } else {
+        let origins_iter = config.allowed_origins.iter().filter_map(|s| s.parse().ok());
+        AllowOrigin::list(origins_iter)
+    };
+
+    let cors = CorsLayer::new()
+        .allow_origin(allowed_origins)
+        .allow_methods(Any)
+        .allow_headers(Any)
+        .allow_credentials(config.allow_credentials)
+        .max_age(Duration::from_secs(config.max_age_seconds));
+
+    info!(
+        "CORS Layer configured: origins={:?}, credentials={}, max_age={}",
+        config.allowed_origins, config.allow_credentials, config.max_age_seconds
+    );
+
+    cors
 }

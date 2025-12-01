@@ -19,6 +19,7 @@ A high-performance, asynchronous REST API built with Rust, Axum, and PostgreSQL.
 * **Pagination**: standardized pagination logic for list endpoints.
 * **Modular Routing:** Clean, easy-to-read routing definitions using the Axum framework.
 * **Environment Configuration:** Secure configuration via `.env` files using `dotenvy`.
+* **CORS**: Configuration with flexible options.
 
 ## Getting Started
 
@@ -53,6 +54,15 @@ You need the following installed locally:
     DATABASE_URL=postgres://username:password@localhost:port/database_name
     PORT=3000
     RUST_LOG=info
+    ```
+    
+    #### CORS Configuration
+    
+    ```env
+    # Allow all origins (not recommended for production)
+    ALLOWED_ORIGINS="*"
+    ALLOW_CREDENTIALS=false
+    MAX_AGE=3600  
     ```
 
 3.  **Setup Database & Migrations:**

@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS customers (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_customers_zip_code_prefix ON customers(customer_zip_code_prefix);
+CREATE INDEX idx_customers_created_at ON customers(created_at);
 CREATE INDEX idx_customers_city ON customers(customer_city);
 CREATE INDEX idx_customers_state ON customers(customer_state);
 
