@@ -1,6 +1,5 @@
 # Axum & SQLx Web Server Project
 
-[![Rust](https://github.com/daencordova/brazilian_ecommerce/actions/workflows/rust.yml/badge.svg)](https://github.com/daencordova/brazilian_ecommerce/actions/workflows/rust.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/daencordova/brazilian_ecommerce.svg?style=social&label=Star)](https://github.com/daencordova/brazilian_ecommerce)
 
@@ -38,7 +37,7 @@ You need the following installed locally:
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/daencordova/brazilian_ecommerce.git](https://github.com/daencordova/brazilian_ecommerce.git)
+    git clone https://github.com/daencordova/brazilian_ecommerce.git
     cd brazilian_ecommerce
     ```
 
