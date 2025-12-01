@@ -15,6 +15,58 @@ use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use tracing::{error, info, instrument};
 use validator::Validate;
 
+#[derive(Debug, Serialize)]
+pub struct PaginationMeta {
+    pub total_records: i64,
+    pub page: u32,
+    pub page_size: u32,
+    pub total_pages: u32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PaginationParams {
+    pub page: Option<u32>,
+    pub page_size: Option<u32>,
+}
+
+impl PaginationParams {
+    pub fn normalize(&self) -> (i64, i64, u32, u32) {
+        let page = self.page.unwrap_or(1).max(1);
+        let page_size = self.page_size.unwrap_or(10).clamp(1, 100);
+
+        let limit = page_size as i64;
+        let offset = ((page - 1) as i64) * limit;
+
+        (limit, offset, page, page_size)
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct PaginatedResponse<T> {
+    pub data: Vec<T>,
+    pub meta: PaginationMeta,
+}
+
+impl<T> PaginatedResponse<T> {
+    pub fn new(data: Vec<T>, count: i64, page: u32, page_size: u32) -> Self {
+        let total_pages = if count == 0 {
+            1
+        } else {
+            (count as f64 / page_size as f64).ceil() as u32
+        };
+
+        Self {
+            data,
+            meta: PaginationMeta {
+                total_records: count,
+                page,
+                page_size,
+                total_pages,
+            },
+        }
+    }
+}
+
 // --- Domain Models & DTOs ---
 
 #[derive(Debug, FromRow, Serialize, Clone)]
@@ -53,27 +105,7 @@ pub struct UpdateCustomerDto {
     pub customer_state: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct PaginationMeta {
-    pub total_records: i64,
-    pub page: u32,
-    pub page_size: u32,
-    pub total_pages: u32,
-}
-
-#[derive(Debug, Serialize)]
-pub struct PaginatedResponse<T> {
-    pub data: Vec<T>,
-    pub meta: PaginationMeta,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct PaginationParams {
-    pub page: Option<u32>,
-    pub page_size: Option<u32>,
-}
-
-/// Structure to hold environment-specific CORS settings
+// Structure to hold environment-specific CORS settings
 pub struct CorsConfig {
     pub allowed_origins: Vec<String>,
     pub allow_credentials: bool,
@@ -347,31 +379,16 @@ impl CustomerService {
         &self,
         params: PaginationParams,
     ) -> AppResult<PaginatedResponse<Customer>> {
-        let page = params.page.unwrap_or(1).max(1);
-        let page_size = params.page_size.unwrap_or(10).clamp(1, 100);
-
-        let limit = page_size as i64;
-        let offset = ((page - 1) as i64) * limit;
+        let (limit, offset, page, page_size) = params.normalize();
 
         let (customers, total_records) = self.repository.find_all(limit, offset).await?;
 
-        let total_pages = if total_records == 0 {
-            1
-        } else {
-            (total_records as f64 / limit as f64).ceil() as u32
-        };
-
-        let meta = PaginationMeta {
+        Ok(PaginatedResponse::new(
+            customers,
             total_records,
-            page: page,
+            page,
             page_size,
-            total_pages,
-        };
-
-        Ok(PaginatedResponse {
-            data: customers,
-            meta,
-        })
+        ))
     }
 }
 
