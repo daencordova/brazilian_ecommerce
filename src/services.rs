@@ -4,7 +4,7 @@ use validator::Validate;
 
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    CreateCustomerDto, Customer, PaginatedResponse, PaginationParams, UpdateCustomerDto,
+    CreateCustomerDto, Customer, CustomerSearchParams, PaginatedResponse, UpdateCustomerDto,
 };
 use crate::repositories::CustomerRepository;
 
@@ -63,11 +63,11 @@ impl CustomerService {
     #[instrument(skip(self))]
     pub async fn get_customers(
         &self,
-        params: PaginationParams,
+        params: CustomerSearchParams,
     ) -> AppResult<PaginatedResponse<Customer>> {
-        let (limit, offset, page, page_size) = params.normalize();
+        let (_, _, page, page_size) = params.normalize();
 
-        let (customers, total_records) = self.repository.find_all(limit, offset).await?;
+        let (customers, total_records) = self.repository.find_all(&params).await?;
 
         Ok(PaginatedResponse::new(
             customers,

@@ -11,12 +11,14 @@ pub struct PaginationMeta {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct PaginationParams {
+pub struct CustomerSearchParams {
     pub page: Option<u32>,
     pub page_size: Option<u32>,
+    pub city: Option<String>,
+    pub state: Option<String>,
 }
 
-impl PaginationParams {
+impl CustomerSearchParams {
     pub fn normalize(&self) -> (i64, i64, u32, u32) {
         let page = self.page.unwrap_or(1).max(1);
         let page_size = self.page_size.unwrap_or(10).clamp(1, 100);

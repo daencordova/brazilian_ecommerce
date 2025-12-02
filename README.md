@@ -41,6 +41,24 @@ You need the following installed locally:
     git clone https://github.com/daencordova/brazilian_ecommerce.git
     cd brazilian_ecommerce
     ```
+    
+    #### Project Structure
+    ```
+    ├── src/
+    │   ├── config.rs
+    │   ├── error.rs
+    │   ├── handlers.rs
+    │   ├── main.rs
+    │   ├── models.rs
+    │   ├── repositories.rs
+    │   ├── services.rs
+    │   └── state.rs
+    ├── migrations           # SQL migration files
+    ├── .env                 # Environment variables
+    ├── .env.example         # Template example file
+    ├── Cargo.toml           # Dependencies
+    └── README.md            # Documentation
+    ```
 
 2.  **Configure Environment:**
     Create a file named `.env` in the project root:
@@ -95,11 +113,18 @@ The server will be available at http://127.0.0.1:3000/customers
 ### Usage Examples
 
 #### Get all Customers
-Endpoint: GET /customers?page=1&page_size=10
+Endpoint: GET 
+
+  - `GET /customers?city=Sao%20Paulo`
+  - `GET /customers?state=SP`
+  - `GET /customers?city=Rio%20de%20Janeiro&state=RJ&page=1&page_size=10`
+
 
 ```bash
 curl -X GET http://localhost:3000/customers?page=1&page_size=10 \
    -H "Content-Type: application/json"
+   -H "Origin: http://localhost:3000"
+   
 ```
 
 ```json
@@ -115,7 +140,7 @@ curl -X GET http://localhost:3000/customers?page=1&page_size=10 \
 ``` 
    
 #### Get a Customer
-Endpoint: GET /customers/{id}
+Endpoint: `GET /customers/{id}`
 
 ```bash
 curl -X GET http://localhost:3000/customers/06b899... \
@@ -131,24 +156,6 @@ curl -X GET http://localhost:3000/customers/06b899... \
   "customer_state":"SP",
   "created_at":"2025-11-27T23:49:03.389227Z"
 }
-```
-
-### Project Structure
-```
-├── src/
-│   ├── config.rs
-│   ├── error.rs
-│   ├── handlers.rs
-│   ├── main.rs
-│   ├── models.rs
-│   ├── repositories.rs
-│   ├── services.rs
-│   └── state.rs
-├── migrations           # SQL migration files
-├── .env                 # Environment variables
-├── .env.example         # Template example file
-├── Cargo.toml           # Dependencies
-└── README.md            # Documentation
 ```
 
 ### Testing

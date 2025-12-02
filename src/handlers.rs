@@ -6,7 +6,7 @@ use axum::{
 
 use crate::error::AppResult;
 use crate::models::{
-    CreateCustomerDto, Customer, PaginatedResponse, PaginationParams, UpdateCustomerDto,
+    CreateCustomerDto, Customer, CustomerSearchParams, PaginatedResponse, UpdateCustomerDto,
 };
 use crate::state::AppState;
 
@@ -20,7 +20,7 @@ pub async fn create_customer_handler(
 
 pub async fn get_customers_handler(
     State(state): State<AppState>,
-    Query(params): Query<PaginationParams>,
+    Query(params): Query<CustomerSearchParams>,
 ) -> AppResult<Json<PaginatedResponse<Customer>>> {
     let response = state.customer_service.get_customers(params).await?;
     Ok(Json(response))

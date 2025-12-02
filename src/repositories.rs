@@ -1,4 +1,4 @@
-use crate::models::{CreateCustomerDto, Customer, UpdateCustomerDto};
+use crate::models::{CreateCustomerDto, Customer, CustomerSearchParams, UpdateCustomerDto};
 use async_trait::async_trait;
 use sqlx::{PgPool, Result as SqlxResult};
 use tracing::{error, info, instrument};
@@ -6,7 +6,7 @@ use tracing::{error, info, instrument};
 #[async_trait]
 pub trait CustomerRepository: Send + Sync {
     async fn create(&self, dto: CreateCustomerDto) -> SqlxResult<Customer>;
-    async fn find_all(&self, limit: i64, offset: i64) -> SqlxResult<(Vec<Customer>, i64)>;
+    async fn find_all(&self, params: &CustomerSearchParams) -> SqlxResult<(Vec<Customer>, i64)>;
     async fn find_by_id(&self, id: &str) -> SqlxResult<Option<Customer>>;
     async fn update(&self, id: &str, dto: UpdateCustomerDto) -> SqlxResult<Option<Customer>>;
     async fn delete(&self, id: &str) -> SqlxResult<u64>;
@@ -47,10 +47,20 @@ impl CustomerRepository for PgCustomerRepository {
         .await
     }
 
-    async fn find_all(&self, limit: i64, offset: i64) -> SqlxResult<(Vec<Customer>, i64)> {
-        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM customers")
-            .fetch_one(&self.pool)
-            .await?;
+    async fn find_all(&self, params: &CustomerSearchParams) -> SqlxResult<(Vec<Customer>, i64)> {
+        let (limit, offset, _, _) = params.normalize();
+
+        let count_row: (i64,) = sqlx::query_as(
+            r#"
+            SELECT COUNT(*) FROM customers
+            WHERE ($1::text IS NULL OR customer_city = $1)
+              AND ($2::text IS NULL OR customer_state = $2)
+            "#,
+        )
+        .bind(&params.city)
+        .bind(&params.state)
+        .fetch_one(&self.pool)
+        .await?;
         let total_count = count_row.0;
 
         let customers = sqlx::query_as::<_, Customer>(
@@ -59,10 +69,14 @@ impl CustomerRepository for PgCustomerRepository {
                 customer_id, customer_unique_id, customer_zip_code_prefix,
                 customer_city, customer_state, created_at
             FROM customers
+            WHERE ($1::text IS NULL OR customer_city = $1)
+              AND ($2::text IS NULL OR customer_state = $2)
             ORDER BY created_at DESC
-            LIMIT $1 OFFSET $2
+            LIMIT $3 OFFSET $4
             "#,
         )
+        .bind(&params.city)
+        .bind(&params.state)
         .bind(limit)
         .bind(offset)
         .fetch_all(&self.pool)
