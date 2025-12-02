@@ -15,19 +15,7 @@ use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use tracing::{error, info, instrument};
 use validator::Validate;
 
-#[derive(Debug, Serialize)]
-pub struct PaginationMeta {
-    pub total_records: i64,
-    pub page: u32,
-    pub page_size: u32,
-    pub total_pages: u32,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct PaginationParams {
-    pub page: Option<u32>,
-    pub page_size: Option<u32>,
-}
+#[derive(Debug, Serialize, Debug, Deserialize)]
 
 impl PaginationParams {
     pub fn normalize(&self) -> (i64, i64, u32, u32) {
@@ -42,10 +30,6 @@ impl PaginationParams {
 }
 
 #[derive(Debug, Serialize)]
-pub struct PaginatedResponse<T> {
-    pub data: Vec<T>,
-    pub meta: PaginationMeta,
-}
 
 impl<T> PaginatedResponse<T> {
     pub fn new(data: Vec<T>, count: i64, page: u32, page_size: u32) -> Self {
