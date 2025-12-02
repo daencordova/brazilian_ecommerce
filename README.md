@@ -135,8 +135,15 @@ curl -X GET http://localhost:3000/customers/06b899... \
 
 ### Project Structure
 ```
-├── src
-│   └── main.rs          # Database access layer
+├── src/
+│   ├── config.rs
+│   ├── error.rs
+│   ├── handlers.rs
+│   ├── main.rs
+│   ├── models.rs
+│   ├── repositories.rs
+│   ├── services.rs
+│   └── state.rs
 ├── migrations           # SQL migration files
 ├── .env                 # Environment variables
 ├── .env.example         # Template example file
