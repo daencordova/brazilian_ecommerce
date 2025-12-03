@@ -20,10 +20,10 @@ use crate::config::{create_cors_layer, load_config};
 use crate::error::AppError;
 use crate::handlers::{
     create_customer_handler, delete_customer_handler, get_customer_by_id_handler,
-    get_customers_handler, get_geolocations_handler, update_customer_handler,
+    get_customers_handler, get_sellers_handler, update_customer_handler,
 };
-use crate::repositories::{PgCustomerRepository, PgGeolocationRepository};
-use crate::services::{CustomerService, GeolocationService};
+use crate::repositories::{PgCustomerRepository, PgSellerRepository};
+use crate::services::{CustomerService, SellerService};
 use crate::state::AppState;
 
 #[tokio::main]
@@ -48,15 +48,15 @@ async fn main() -> std::result::Result<(), AppError> {
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
-    let pg_repository = PgCustomerRepository::new(pool.clone());
-    let customer_service = CustomerService::new(Arc::new(pg_repository));
+    let customer_repository = PgCustomerRepository::new(pool.clone());
+    let customer_service = CustomerService::new(Arc::new(customer_repository));
 
-    let geo_repository = PgGeolocationRepository::new(pool);
-    let geolocation_service = GeolocationService::new(Arc::new(geo_repository));
+    let seller_repository = PgSellerRepository::new(pool);
+    let seller_service = SellerService::new(Arc::new(seller_repository));
 
     let app_state = AppState {
         customer_service,
-        geolocation_service,
+        seller_service,
     };
 
     let app = Router::new()
@@ -65,7 +65,7 @@ async fn main() -> std::result::Result<(), AppError> {
         .route("/customers/{id}", get(get_customer_by_id_handler))
         .route("/customers/{id}", put(update_customer_handler))
         .route("/customers/{id}", delete(delete_customer_handler))
-        .route("/geolocations", get(get_geolocations_handler))
+        .route("/sellers", get(get_sellers_handler))
         .with_state(app_state)
         .layer(cors_layer);
 

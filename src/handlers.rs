@@ -6,8 +6,8 @@ use axum::{
 
 use crate::error::AppResult;
 use crate::models::{
-    CreateCustomerDto, Customer, CustomerSearchQuery, Geolocation, GeolocationSearchQuery,
-    PaginatedResponse, UpdateCustomerDto,
+    CreateCustomerDto, Customer, CustomerSearchQuery, PaginatedResponse, Seller, SellerSearchQuery,
+    UpdateCustomerDto,
 };
 use crate::state::AppState;
 
@@ -52,10 +52,10 @@ pub async fn delete_customer_handler(
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn get_geolocations_handler(
+pub async fn get_sellers_handler(
     State(state): State<AppState>,
-    Query(query): Query<GeolocationSearchQuery>,
-) -> AppResult<Json<PaginatedResponse<Geolocation>>> {
-    let response = state.geolocation_service.get_geolocations(query).await?;
+    Query(query): Query<SellerSearchQuery>,
+) -> AppResult<Json<PaginatedResponse<Seller>>> {
+    let response = state.seller_service.get_sellers(query).await?;
     Ok(Json(response))
 }

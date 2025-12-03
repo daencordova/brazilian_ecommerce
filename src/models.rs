@@ -35,7 +35,7 @@ pub struct LocationFilter {
 }
 
 pub type CustomerFilter = LocationFilter;
-pub type GeolocationFilter = LocationFilter;
+pub type SellerFilter = LocationFilter;
 
 #[derive(Debug, Deserialize)]
 pub struct CustomerSearchQuery {
@@ -62,23 +62,22 @@ impl CustomerSearchQuery {
 }
 
 #[derive(Debug, FromRow, Serialize, Clone)]
-pub struct Geolocation {
-    pub geolocation_zip_code_prefix: String,
-    pub geolocation_lat: f64,
-    pub geolocation_lng: f64,
-    pub geolocation_city: String,
-    pub geolocation_state: String,
+pub struct Seller {
+    pub seller_id: String,
+    pub seller_zip_code_prefix: String,
+    pub seller_city: String,
+    pub seller_state: String,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct GeolocationSearchQuery {
+pub struct SellerSearchQuery {
     pub page: Option<u32>,
     pub page_size: Option<u32>,
     pub city: Option<String>,
     pub state: Option<String>,
 }
 
-impl GeolocationSearchQuery {
+impl SellerSearchQuery {
     pub fn pagination(&self) -> PaginationParams {
         PaginationParams {
             page: self.page,
@@ -127,7 +126,6 @@ pub struct Customer {
     pub customer_zip_code_prefix: String,
     pub customer_city: String,
     pub customer_state: String,
-    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[derive(Debug, Deserialize, Validate)]

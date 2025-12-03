@@ -4,10 +4,10 @@ use validator::Validate;
 
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    CreateCustomerDto, Customer, CustomerSearchQuery, Geolocation, GeolocationSearchQuery,
-    PaginatedResponse, UpdateCustomerDto,
+    CreateCustomerDto, Customer, CustomerSearchQuery, PaginatedResponse, Seller, SellerSearchQuery,
+    UpdateCustomerDto,
 };
-use crate::repositories::{CustomerRepository, GeolocationRepository};
+use crate::repositories::{CustomerRepository, SellerRepository};
 
 #[derive(Clone)]
 pub struct CustomerService {
@@ -83,28 +83,28 @@ impl CustomerService {
 }
 
 #[derive(Clone)]
-pub struct GeolocationService {
-    repository: Arc<dyn GeolocationRepository>,
+pub struct SellerService {
+    repository: Arc<dyn SellerRepository>,
 }
 
-impl GeolocationService {
-    pub fn new(repository: Arc<dyn GeolocationRepository>) -> Self {
+impl SellerService {
+    pub fn new(repository: Arc<dyn SellerRepository>) -> Self {
         Self { repository }
     }
 
     #[instrument(skip(self))]
-    pub async fn get_geolocations(
+    pub async fn get_sellers(
         &self,
-        query: GeolocationSearchQuery,
-    ) -> AppResult<PaginatedResponse<Geolocation>> {
+        query: SellerSearchQuery,
+    ) -> AppResult<PaginatedResponse<Seller>> {
         let pagination = query.pagination();
         let filter = query.filter();
         let (_, _, page, page_size) = pagination.normalize();
 
-        let (geolocations, total_records) = self.repository.find_all(&filter, &pagination).await?;
+        let (sellers, total_records) = self.repository.find_all(&filter, &pagination).await?;
 
         Ok(PaginatedResponse::new(
-            geolocations,
+            sellers,
             total_records,
             page,
             page_size,

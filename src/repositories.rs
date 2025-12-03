@@ -1,5 +1,5 @@
 use crate::models::{
-    CreateCustomerDto, Customer, CustomerFilter, Geolocation, GeolocationFilter, PaginationParams,
+    CreateCustomerDto, Customer, CustomerFilter, PaginationParams, Seller, SellerFilter,
     UpdateCustomerDto,
 };
 use async_trait::async_trait;
@@ -42,7 +42,7 @@ impl CustomerRepository for PgCustomerRepository {
             VALUES ($1, $2, $3, $4, $5)
             RETURNING
                 customer_id, customer_unique_id, customer_zip_code_prefix,
-                customer_city, customer_state, created_at
+                customer_city, customer_state
             "#,
         )
         .bind(dto.customer_id)
@@ -78,11 +78,11 @@ impl CustomerRepository for PgCustomerRepository {
             r#"
             SELECT
                 customer_id, customer_unique_id, customer_zip_code_prefix,
-                customer_city, customer_state, created_at
+                customer_city, customer_state
             FROM customers
             WHERE ($1::text IS NULL OR customer_city = $1)
               AND ($2::text IS NULL OR customer_state = $2)
-            ORDER BY created_at DESC
+            ORDER BY customer_zip_code_prefix DESC
             LIMIT $3 OFFSET $4
             "#,
         )
@@ -101,7 +101,7 @@ impl CustomerRepository for PgCustomerRepository {
             r#"
             SELECT
                 customer_id, customer_unique_id, customer_zip_code_prefix,
-                customer_city, customer_state, created_at
+                customer_city, customer_state
             FROM customers WHERE customer_id = $1
             "#,
         )
@@ -123,7 +123,7 @@ impl CustomerRepository for PgCustomerRepository {
             WHERE customer_id = $1
             RETURNING
                 customer_id, customer_unique_id, customer_zip_code_prefix,
-                customer_city, customer_state, created_at
+                customer_city, customer_state
             "#,
         )
         .bind(id)
@@ -167,39 +167,39 @@ impl CustomerRepository for PgCustomerRepository {
 }
 
 #[async_trait]
-pub trait GeolocationRepository: Send + Sync {
+pub trait SellerRepository: Send + Sync {
     async fn find_all(
         &self,
-        filter: &GeolocationFilter,
+        filter: &SellerFilter,
         pagination: &PaginationParams,
-    ) -> SqlxResult<(Vec<Geolocation>, i64)>;
+    ) -> SqlxResult<(Vec<Seller>, i64)>;
 }
 
 #[derive(Clone)]
-pub struct PgGeolocationRepository {
+pub struct PgSellerRepository {
     pool: PgPool,
 }
 
-impl PgGeolocationRepository {
+impl PgSellerRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 }
 
 #[async_trait]
-impl GeolocationRepository for PgGeolocationRepository {
+impl SellerRepository for PgSellerRepository {
     async fn find_all(
         &self,
-        filter: &GeolocationFilter,
+        filter: &SellerFilter,
         pagination: &PaginationParams,
-    ) -> SqlxResult<(Vec<Geolocation>, i64)> {
+    ) -> SqlxResult<(Vec<Seller>, i64)> {
         let (limit, offset, _, _) = pagination.normalize();
 
         let count_row: (i64,) = sqlx::query_as(
             r#"
-            SELECT COUNT(*) FROM geolocations
-            WHERE ($1::text IS NULL OR geolocation_city = $1)
-              AND ($2::text IS NULL OR geolocation_state = $2)
+            SELECT COUNT(*) FROM sellers
+            WHERE ($1::text IS NULL OR seller_city = $1)
+              AND ($2::text IS NULL OR seller_state = $2)
             "#,
         )
         .bind(&filter.city)
@@ -208,17 +208,16 @@ impl GeolocationRepository for PgGeolocationRepository {
         .await?;
         let total_count = count_row.0;
 
-        let geolocations = sqlx::query_as::<_, Geolocation>(
+        let sellers = sqlx::query_as::<_, Seller>(
             r#"
             SELECT
-                geolocation_zip_code_prefix,
-                geolocation_lat::FLOAT8 as geolocation_lat,
-                geolocation_lng::FLOAT8 as geolocation_lng,
-                geolocation_city,
-                geolocation_state
-            FROM geolocations
-            WHERE ($1::text IS NULL OR geolocation_city = $1)
-              AND ($2::text IS NULL OR geolocation_state = $2)
+                seller_id,
+                seller_zip_code_prefix,
+                seller_city,
+                seller_state
+            FROM sellers
+            WHERE ($1::text IS NULL OR seller_city = $1)
+              AND ($2::text IS NULL OR seller_state = $2)
             LIMIT $3 OFFSET $4
             "#,
         )
@@ -229,6 +228,6 @@ impl GeolocationRepository for PgGeolocationRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok((geolocations, total_count))
+        Ok((sellers, total_count))
     }
 }

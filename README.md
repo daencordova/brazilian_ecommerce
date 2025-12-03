@@ -153,8 +153,7 @@ curl -X GET http://localhost:3000/customers/06b899... \
   "customer_unique_id":"861eff4711a542e4b93843c6dd7febb0",
   "customer_zip_code_prefix":"14409",
   "customer_city":"franca",
-  "customer_state":"SP",
-  "created_at":"2025-11-27T23:49:03.389227Z"
+  "customer_state":"SP"
 }
 ```
 

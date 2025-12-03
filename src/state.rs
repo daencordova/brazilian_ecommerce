@@ -1,7 +1,7 @@
-use crate::services::{CustomerService, GeolocationService};
+use crate::services::{CustomerService, SellerService};
 
 #[derive(Clone)]
 pub struct AppState {
     pub customer_service: CustomerService,
-    pub geolocation_service: GeolocationService,
+    pub seller_service: SellerService,
 }
