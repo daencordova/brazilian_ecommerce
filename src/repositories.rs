@@ -1,4 +1,6 @@
-use crate::models::{CreateCustomerDto, Customer, CustomerSearchParams, UpdateCustomerDto};
+use crate::models::{
+    CreateCustomerDto, Customer, CustomerFilter, PaginationParams, UpdateCustomerDto,
+};
 use async_trait::async_trait;
 use sqlx::{PgPool, Result as SqlxResult};
 use tracing::{error, info, instrument};
@@ -6,7 +8,11 @@ use tracing::{error, info, instrument};
 #[async_trait]
 pub trait CustomerRepository: Send + Sync {
     async fn create(&self, dto: CreateCustomerDto) -> SqlxResult<Customer>;
-    async fn find_all(&self, params: &CustomerSearchParams) -> SqlxResult<(Vec<Customer>, i64)>;
+    async fn find_all(
+        &self,
+        filter: &CustomerFilter,
+        pagination: &PaginationParams,
+    ) -> SqlxResult<(Vec<Customer>, i64)>;
     async fn find_by_id(&self, id: &str) -> SqlxResult<Option<Customer>>;
     async fn update(&self, id: &str, dto: UpdateCustomerDto) -> SqlxResult<Option<Customer>>;
     async fn delete(&self, id: &str) -> SqlxResult<u64>;
@@ -47,8 +53,12 @@ impl CustomerRepository for PgCustomerRepository {
         .await
     }
 
-    async fn find_all(&self, params: &CustomerSearchParams) -> SqlxResult<(Vec<Customer>, i64)> {
-        let (limit, offset, _, _) = params.normalize();
+    async fn find_all(
+        &self,
+        filter: &CustomerFilter,
+        pagination: &PaginationParams,
+    ) -> SqlxResult<(Vec<Customer>, i64)> {
+        let (limit, offset, _, _) = pagination.normalize();
 
         let count_row: (i64,) = sqlx::query_as(
             r#"
@@ -57,8 +67,8 @@ impl CustomerRepository for PgCustomerRepository {
               AND ($2::text IS NULL OR customer_state = $2)
             "#,
         )
-        .bind(&params.city)
-        .bind(&params.state)
+        .bind(&filter.city)
+        .bind(&filter.state)
         .fetch_one(&self.pool)
         .await?;
         let total_count = count_row.0;
@@ -75,8 +85,8 @@ impl CustomerRepository for PgCustomerRepository {
             LIMIT $3 OFFSET $4
             "#,
         )
-        .bind(&params.city)
-        .bind(&params.state)
+        .bind(&filter.city)
+        .bind(&filter.state)
         .bind(limit)
         .bind(offset)
         .fetch_all(&self.pool)

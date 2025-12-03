@@ -11,14 +11,12 @@ pub struct PaginationMeta {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct CustomerSearchParams {
+pub struct PaginationParams {
     pub page: Option<u32>,
     pub page_size: Option<u32>,
-    pub city: Option<String>,
-    pub state: Option<String>,
 }
 
-impl CustomerSearchParams {
+impl PaginationParams {
     pub fn normalize(&self) -> (i64, i64, u32, u32) {
         let page = self.page.unwrap_or(1).max(1);
         let page_size = self.page_size.unwrap_or(10).clamp(1, 100);
@@ -27,6 +25,36 @@ impl CustomerSearchParams {
         let offset = ((page - 1) as i64) * limit;
 
         (limit, offset, page, page_size)
+    }
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct CustomerFilter {
+    pub city: Option<String>,
+    pub state: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CustomerSearchQuery {
+    pub page: Option<u32>,
+    pub page_size: Option<u32>,
+    pub city: Option<String>,
+    pub state: Option<String>,
+}
+
+impl CustomerSearchQuery {
+    pub fn pagination(&self) -> PaginationParams {
+        PaginationParams {
+            page: self.page,
+            page_size: self.page_size,
+        }
+    }
+
+    pub fn filter(&self) -> CustomerFilter {
+        CustomerFilter {
+            city: self.city.clone(),
+            state: self.state.clone(),
+        }
     }
 }
 
