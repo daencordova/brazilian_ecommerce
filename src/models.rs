@@ -29,10 +29,13 @@ impl PaginationParams {
 }
 
 #[derive(Debug, Deserialize, Default)]
-pub struct CustomerFilter {
+pub struct LocationFilter {
     pub city: Option<String>,
     pub state: Option<String>,
 }
+
+pub type CustomerFilter = LocationFilter;
+pub type GeolocationFilter = LocationFilter;
 
 #[derive(Debug, Deserialize)]
 pub struct CustomerSearchQuery {
@@ -50,8 +53,41 @@ impl CustomerSearchQuery {
         }
     }
 
-    pub fn filter(&self) -> CustomerFilter {
-        CustomerFilter {
+    pub fn filter(&self) -> LocationFilter {
+        LocationFilter {
+            city: self.city.clone(),
+            state: self.state.clone(),
+        }
+    }
+}
+
+#[derive(Debug, FromRow, Serialize, Clone)]
+pub struct Geolocation {
+    pub geolocation_zip_code_prefix: String,
+    pub geolocation_lat: f64,
+    pub geolocation_lng: f64,
+    pub geolocation_city: String,
+    pub geolocation_state: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GeolocationSearchQuery {
+    pub page: Option<u32>,
+    pub page_size: Option<u32>,
+    pub city: Option<String>,
+    pub state: Option<String>,
+}
+
+impl GeolocationSearchQuery {
+    pub fn pagination(&self) -> PaginationParams {
+        PaginationParams {
+            page: self.page,
+            page_size: self.page_size,
+        }
+    }
+
+    pub fn filter(&self) -> LocationFilter {
+        LocationFilter {
             city: self.city.clone(),
             state: self.state.clone(),
         }

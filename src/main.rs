@@ -12,18 +12,18 @@ use axum::{
 };
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
-use std::{env, net::SocketAddr, sync::Arc, time::Duration};
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 use tokio::signal;
 use tracing::info;
 
-use crate::config::{create_cors_layer, load_cors_config};
+use crate::config::{create_cors_layer, load_config};
 use crate::error::AppError;
 use crate::handlers::{
     create_customer_handler, delete_customer_handler, get_customer_by_id_handler,
-    get_customers_handler, update_customer_handler,
+    get_customers_handler, get_geolocations_handler, update_customer_handler,
 };
-use crate::repositories::PgCustomerRepository;
-use crate::services::CustomerService;
+use crate::repositories::{PgCustomerRepository, PgGeolocationRepository};
+use crate::services::{CustomerService, GeolocationService};
 use crate::state::AppState;
 
 #[tokio::main]
@@ -32,20 +32,15 @@ async fn main() -> std::result::Result<(), AppError> {
 
     tracing_subscriber::fmt::init();
 
-    let database_url = env::var("DATABASE_URL")
-        .map_err(|_| AppError::ConfigError("DATABASE_URL must be set".to_string()))?;
-
-    let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
-
-    let cors_config = load_cors_config()?;
-    let cors_layer = create_cors_layer(cors_config);
+    let config = load_config()?;
+    let cors_layer = create_cors_layer(config.cors);
 
     info!("Connecting to database...");
 
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .acquire_timeout(Duration::from_secs(3))
-        .connect(&database_url)
+        .connect(&config.database_url)
         .await
         .map_err(AppError::DatabaseError)?;
 
@@ -53,9 +48,16 @@ async fn main() -> std::result::Result<(), AppError> {
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
-    let pg_repository = PgCustomerRepository::new(pool);
+    let pg_repository = PgCustomerRepository::new(pool.clone());
     let customer_service = CustomerService::new(Arc::new(pg_repository));
-    let app_state = AppState { customer_service };
+
+    let geo_repository = PgGeolocationRepository::new(pool);
+    let geolocation_service = GeolocationService::new(Arc::new(geo_repository));
+
+    let app_state = AppState {
+        customer_service,
+        geolocation_service,
+    };
 
     let app = Router::new()
         .route("/customers", post(create_customer_handler))
@@ -63,10 +65,11 @@ async fn main() -> std::result::Result<(), AppError> {
         .route("/customers/{id}", get(get_customer_by_id_handler))
         .route("/customers/{id}", put(update_customer_handler))
         .route("/customers/{id}", delete(delete_customer_handler))
+        .route("/geolocations", get(get_geolocations_handler))
         .with_state(app_state)
         .layer(cors_layer);
 
-    let addr: SocketAddr = format!("0.0.0.0:{}", port)
+    let addr: SocketAddr = format!("0.0.0.0:{}", config.port)
         .parse()
         .map_err(|e| AppError::ConfigError(format!("Invalid port: {}", e)))?;
 

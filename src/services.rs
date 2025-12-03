@@ -4,9 +4,10 @@ use validator::Validate;
 
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    CreateCustomerDto, Customer, CustomerSearchQuery, PaginatedResponse, UpdateCustomerDto,
+    CreateCustomerDto, Customer, CustomerSearchQuery, Geolocation, GeolocationSearchQuery,
+    PaginatedResponse, UpdateCustomerDto,
 };
-use crate::repositories::CustomerRepository;
+use crate::repositories::{CustomerRepository, GeolocationRepository};
 
 #[derive(Clone)]
 pub struct CustomerService {
@@ -74,6 +75,36 @@ impl CustomerService {
 
         Ok(PaginatedResponse::new(
             customers,
+            total_records,
+            page,
+            page_size,
+        ))
+    }
+}
+
+#[derive(Clone)]
+pub struct GeolocationService {
+    repository: Arc<dyn GeolocationRepository>,
+}
+
+impl GeolocationService {
+    pub fn new(repository: Arc<dyn GeolocationRepository>) -> Self {
+        Self { repository }
+    }
+
+    #[instrument(skip(self))]
+    pub async fn get_geolocations(
+        &self,
+        query: GeolocationSearchQuery,
+    ) -> AppResult<PaginatedResponse<Geolocation>> {
+        let pagination = query.pagination();
+        let filter = query.filter();
+        let (_, _, page, page_size) = pagination.normalize();
+
+        let (geolocations, total_records) = self.repository.find_all(&filter, &pagination).await?;
+
+        Ok(PaginatedResponse::new(
+            geolocations,
             total_records,
             page,
             page_size,

@@ -3,6 +3,30 @@ use std::env;
 use std::time::Duration;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
+pub struct AppConfig {
+    pub database_url: String,
+    pub port: u16,
+    pub cors: CorsConfig,
+}
+
+pub fn load_config() -> Result<AppConfig, AppError> {
+    let database_url = env::var("DATABASE_URL")
+        .map_err(|_| AppError::ConfigError("DATABASE_URL must be set".to_string()))?;
+
+    let port = env::var("PORT")
+        .unwrap_or_else(|_| "3000".to_string())
+        .parse()
+        .map_err(|e| AppError::ConfigError(format!("Invalid PORT: {}", e)))?;
+
+    let cors = load_cors_config()?;
+
+    Ok(AppConfig {
+        database_url,
+        port,
+        cors,
+    })
+}
+
 pub struct CorsConfig {
     pub allowed_origins: AllowOrigin,
     pub allow_credentials: bool,

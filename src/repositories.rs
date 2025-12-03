@@ -1,5 +1,6 @@
 use crate::models::{
-    CreateCustomerDto, Customer, CustomerFilter, PaginationParams, UpdateCustomerDto,
+    CreateCustomerDto, Customer, CustomerFilter, Geolocation, GeolocationFilter, PaginationParams,
+    UpdateCustomerDto,
 };
 use async_trait::async_trait;
 use sqlx::{PgPool, Result as SqlxResult};
@@ -162,5 +163,72 @@ impl CustomerRepository for PgCustomerRepository {
         }
 
         result
+    }
+}
+
+#[async_trait]
+pub trait GeolocationRepository: Send + Sync {
+    async fn find_all(
+        &self,
+        filter: &GeolocationFilter,
+        pagination: &PaginationParams,
+    ) -> SqlxResult<(Vec<Geolocation>, i64)>;
+}
+
+#[derive(Clone)]
+pub struct PgGeolocationRepository {
+    pool: PgPool,
+}
+
+impl PgGeolocationRepository {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait]
+impl GeolocationRepository for PgGeolocationRepository {
+    async fn find_all(
+        &self,
+        filter: &GeolocationFilter,
+        pagination: &PaginationParams,
+    ) -> SqlxResult<(Vec<Geolocation>, i64)> {
+        let (limit, offset, _, _) = pagination.normalize();
+
+        let count_row: (i64,) = sqlx::query_as(
+            r#"
+            SELECT COUNT(*) FROM geolocations
+            WHERE ($1::text IS NULL OR geolocation_city = $1)
+              AND ($2::text IS NULL OR geolocation_state = $2)
+            "#,
+        )
+        .bind(&filter.city)
+        .bind(&filter.state)
+        .fetch_one(&self.pool)
+        .await?;
+        let total_count = count_row.0;
+
+        let geolocations = sqlx::query_as::<_, Geolocation>(
+            r#"
+            SELECT
+                geolocation_zip_code_prefix,
+                geolocation_lat::FLOAT8 as geolocation_lat,
+                geolocation_lng::FLOAT8 as geolocation_lng,
+                geolocation_city,
+                geolocation_state
+            FROM geolocations
+            WHERE ($1::text IS NULL OR geolocation_city = $1)
+              AND ($2::text IS NULL OR geolocation_state = $2)
+            LIMIT $3 OFFSET $4
+            "#,
+        )
+        .bind(&filter.city)
+        .bind(&filter.state)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok((geolocations, total_count))
     }
 }
