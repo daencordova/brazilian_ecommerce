@@ -52,6 +52,10 @@ impl CustomerRepository for PgCustomerRepository {
         .bind(dto.customer_state)
         .fetch_one(&self.pool)
         .await
+        .map_err(|e| {
+            error!("Error creating customer: {:?}", e);
+            e
+        })
     }
 
     async fn find_all(
@@ -71,7 +75,11 @@ impl CustomerRepository for PgCustomerRepository {
         .bind(&filter.city)
         .bind(&filter.state)
         .fetch_one(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| {
+            error!("Error counting customers: {:?}", e);
+            e
+        })?;
         let total_count = count_row.0;
 
         let customers = sqlx::query_as::<_, Customer>(
@@ -91,7 +99,11 @@ impl CustomerRepository for PgCustomerRepository {
         .bind(limit)
         .bind(offset)
         .fetch_all(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| {
+            error!("Error fetching customers: {:?}", e);
+            e
+        })?;
 
         Ok((customers, total_count))
     }
@@ -108,6 +120,10 @@ impl CustomerRepository for PgCustomerRepository {
         .bind(id)
         .fetch_optional(&self.pool)
         .await
+        .map_err(|e| {
+            error!("Error fetching customer by id: {:?}", e);
+            e
+        })
     }
 
     #[instrument(skip(self, dto), fields(customer_id = id))]
@@ -205,7 +221,11 @@ impl SellerRepository for PgSellerRepository {
         .bind(&filter.city)
         .bind(&filter.state)
         .fetch_one(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| {
+            error!("Error counting sellers: {:?}", e);
+            e
+        })?;
         let total_count = count_row.0;
 
         let sellers = sqlx::query_as::<_, Seller>(
@@ -226,7 +246,11 @@ impl SellerRepository for PgSellerRepository {
         .bind(limit)
         .bind(offset)
         .fetch_all(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| {
+            error!("Error fetching sellers: {:?}", e);
+            e
+        })?;
 
         Ok((sellers, total_count))
     }
