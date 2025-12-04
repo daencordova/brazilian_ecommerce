@@ -153,3 +153,15 @@ pub struct UpdateCustomerDto {
     #[validate(length(min = 2, max = 2))]
     pub customer_state: Option<String>,
 }
+
+#[derive(Debug, FromRow, Serialize, Clone)]
+pub struct Order {
+    pub order_id: String,
+    pub customer_id: String,
+    pub order_status: String,
+    pub order_purchase_timestamp: chrono::NaiveDateTime,
+    pub order_approved_at: chrono::NaiveDateTime,
+    pub order_delivered_carrier_date: Option<chrono::NaiveDateTime>,
+    pub order_delivered_customer_date: Option<chrono::NaiveDateTime>,
+    pub order_estimated_delivery_date: chrono::NaiveDateTime,
+}

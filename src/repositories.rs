@@ -1,5 +1,5 @@
 use crate::models::{
-    CreateCustomerDto, Customer, CustomerFilter, PaginationParams, Seller, SellerFilter,
+    CreateCustomerDto, Customer, CustomerFilter, Order, PaginationParams, Seller, SellerFilter,
     UpdateCustomerDto,
 };
 use async_trait::async_trait;
@@ -272,5 +272,76 @@ impl SellerRepository for PgSellerRepository {
             error!("Error fetching seller by id: {:?}", e);
             e
         })
+    }
+}
+
+#[async_trait]
+pub trait OrderRepository: Send + Sync {
+    async fn find_by_customer_id(
+        &self,
+        customer_id: &str,
+        pagination: &PaginationParams,
+    ) -> SqlxResult<(Vec<Order>, i64)>;
+}
+
+#[derive(Clone)]
+pub struct PgOrderRepository {
+    pool: PgPool,
+}
+
+impl PgOrderRepository {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait]
+impl OrderRepository for PgOrderRepository {
+    async fn find_by_customer_id(
+        &self,
+        customer_id: &str,
+        pagination: &PaginationParams,
+    ) -> SqlxResult<(Vec<Order>, i64)> {
+        let (limit, offset, _, _) = pagination.normalize();
+
+        let count_row: (i64,) = sqlx::query_as(
+            r#"
+            SELECT COUNT(*) FROM orders
+            WHERE customer_id = $1
+            "#,
+        )
+        .bind(customer_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| {
+            error!("Error counting orders for customer: {:?}", e);
+            e
+        })?;
+        let total_count = count_row.0;
+
+        let orders = sqlx::query_as::<_, Order>(
+            r#"
+            SELECT
+                order_id, customer_id, order_status,
+                order_purchase_timestamp, order_approved_at,
+                order_delivered_carrier_date, order_delivered_customer_date,
+                order_estimated_delivery_date
+            FROM orders
+            WHERE customer_id = $1
+            ORDER BY order_purchase_timestamp DESC
+            LIMIT $2 OFFSET $3
+            "#,
+        )
+        .bind(customer_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| {
+            error!("Error fetching orders for customer: {:?}", e);
+            e
+        })?;
+
+        Ok((orders, total_count))
     }
 }

@@ -20,10 +20,11 @@ use crate::config::{create_cors_layer, load_config};
 use crate::error::AppError;
 use crate::handlers::{
     create_customer_handler, delete_customer_handler, get_customer_by_id_handler,
-    get_customers_handler, get_seller_by_id_handler, get_sellers_handler, update_customer_handler,
+    get_customer_orders_handler, get_customers_handler, get_seller_by_id_handler,
+    get_sellers_handler, update_customer_handler,
 };
-use crate::repositories::{PgCustomerRepository, PgSellerRepository};
-use crate::services::{CustomerService, SellerService};
+use crate::repositories::{PgCustomerRepository, PgOrderRepository, PgSellerRepository};
+use crate::services::{CustomerService, OrderService, SellerService};
 use crate::state::AppState;
 
 #[tokio::main]
@@ -51,12 +52,16 @@ async fn main() -> std::result::Result<(), AppError> {
     let customer_repository = PgCustomerRepository::new(pool.clone());
     let customer_service = CustomerService::new(Arc::new(customer_repository));
 
-    let seller_repository = PgSellerRepository::new(pool);
+    let seller_repository = PgSellerRepository::new(pool.clone());
     let seller_service = SellerService::new(Arc::new(seller_repository));
+
+    let order_repository = PgOrderRepository::new(pool);
+    let order_service = OrderService::new(Arc::new(order_repository));
 
     let app_state = AppState {
         customer_service,
         seller_service,
+        order_service,
     };
 
     let app = Router::new()
@@ -65,6 +70,7 @@ async fn main() -> std::result::Result<(), AppError> {
         .route("/customers/{id}", get(get_customer_by_id_handler))
         .route("/customers/{id}", put(update_customer_handler))
         .route("/customers/{id}", delete(delete_customer_handler))
+        .route("/customers/{id}/orders", get(get_customer_orders_handler))
         .route("/sellers", get(get_sellers_handler))
         .route("/sellers/{id}", get(get_seller_by_id_handler))
         .with_state(app_state)

@@ -4,10 +4,10 @@ use validator::Validate;
 
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    CreateCustomerDto, Customer, CustomerSearchQuery, PaginatedResponse, Seller, SellerSearchQuery,
-    UpdateCustomerDto,
+    CreateCustomerDto, Customer, CustomerSearchQuery, Order, PaginatedResponse, PaginationParams,
+    Seller, SellerSearchQuery, UpdateCustomerDto,
 };
-use crate::repositories::{CustomerRepository, SellerRepository};
+use crate::repositories::{CustomerRepository, OrderRepository, SellerRepository};
 
 #[derive(Clone)]
 pub struct CustomerService {
@@ -117,5 +117,31 @@ impl SellerService {
             page,
             page_size,
         ))
+    }
+}
+
+#[derive(Clone)]
+pub struct OrderService {
+    repository: Arc<dyn OrderRepository>,
+}
+
+impl OrderService {
+    pub fn new(repository: Arc<dyn OrderRepository>) -> Self {
+        Self { repository }
+    }
+
+    #[instrument(skip(self))]
+    pub async fn get_orders_by_customer(
+        &self,
+        customer_id: &str,
+        pagination: &PaginationParams,
+    ) -> AppResult<PaginatedResponse<Order>> {
+        let (_, _, page, page_size) = pagination.normalize();
+        let (orders, count) = self
+            .repository
+            .find_by_customer_id(customer_id, pagination)
+            .await?;
+
+        Ok(PaginatedResponse::new(orders, count, page, page_size))
     }
 }

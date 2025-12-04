@@ -6,8 +6,8 @@ use axum::{
 
 use crate::error::AppResult;
 use crate::models::{
-    CreateCustomerDto, Customer, CustomerSearchQuery, PaginatedResponse, Seller, SellerSearchQuery,
-    UpdateCustomerDto,
+    CreateCustomerDto, Customer, CustomerSearchQuery, Order, PaginatedResponse, PaginationParams,
+    Seller, SellerSearchQuery, UpdateCustomerDto,
 };
 use crate::state::AppState;
 
@@ -66,4 +66,16 @@ pub async fn get_seller_by_id_handler(
 ) -> AppResult<Json<Seller>> {
     let seller = state.seller_service.get_seller_by_id(&id).await?;
     Ok(Json(seller))
+}
+
+pub async fn get_customer_orders_handler(
+    Path(id): Path<String>,
+    State(state): State<AppState>,
+    Query(pagination): Query<PaginationParams>,
+) -> AppResult<Json<PaginatedResponse<Order>>> {
+    let response = state
+        .order_service
+        .get_orders_by_customer(&id, &pagination)
+        .await?;
+    Ok(Json(response))
 }
