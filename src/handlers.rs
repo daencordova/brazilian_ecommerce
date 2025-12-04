@@ -6,8 +6,8 @@ use axum::{
 
 use crate::error::AppResult;
 use crate::models::{
-    CreateCustomerDto, Customer, CustomerSearchQuery, Order, PaginatedResponse, PaginationParams,
-    Seller, SellerSearchQuery, UpdateCustomerDto,
+    CreateCustomerDto, Customer, LocationSearchQuery, Order, PaginatedResponse, PaginationParams,
+    Seller, UpdateCustomerDto,
 };
 use crate::state::AppState;
 
@@ -21,7 +21,7 @@ pub async fn create_customer_handler(
 
 pub async fn get_customers_handler(
     State(state): State<AppState>,
-    Query(query): Query<CustomerSearchQuery>,
+    Query(query): Query<LocationSearchQuery>,
 ) -> AppResult<Json<PaginatedResponse<Customer>>> {
     let response = state.customer_service.get_customers(query).await?;
     Ok(Json(response))
@@ -54,7 +54,7 @@ pub async fn delete_customer_handler(
 
 pub async fn get_sellers_handler(
     State(state): State<AppState>,
-    Query(query): Query<SellerSearchQuery>,
+    Query(query): Query<LocationSearchQuery>,
 ) -> AppResult<Json<PaginatedResponse<Seller>>> {
     let response = state.seller_service.get_sellers(query).await?;
     Ok(Json(response))

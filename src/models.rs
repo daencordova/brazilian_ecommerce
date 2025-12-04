@@ -37,30 +37,6 @@ pub struct LocationFilter {
 pub type CustomerFilter = LocationFilter;
 pub type SellerFilter = LocationFilter;
 
-#[derive(Debug, Deserialize)]
-pub struct CustomerSearchQuery {
-    pub page: Option<u32>,
-    pub page_size: Option<u32>,
-    pub city: Option<String>,
-    pub state: Option<String>,
-}
-
-impl CustomerSearchQuery {
-    pub fn pagination(&self) -> PaginationParams {
-        PaginationParams {
-            page: self.page,
-            page_size: self.page_size,
-        }
-    }
-
-    pub fn filter(&self) -> LocationFilter {
-        LocationFilter {
-            city: self.city.clone(),
-            state: self.state.clone(),
-        }
-    }
-}
-
 #[derive(Debug, FromRow, Serialize, Clone)]
 pub struct Seller {
     pub seller_id: String,
@@ -70,14 +46,14 @@ pub struct Seller {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct SellerSearchQuery {
+pub struct LocationSearchQuery {
     pub page: Option<u32>,
     pub page_size: Option<u32>,
     pub city: Option<String>,
     pub state: Option<String>,
 }
 
-impl SellerSearchQuery {
+impl LocationSearchQuery {
     pub fn pagination(&self) -> PaginationParams {
         PaginationParams {
             page: self.page,

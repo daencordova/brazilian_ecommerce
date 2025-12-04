@@ -4,8 +4,8 @@ use validator::Validate;
 
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    CreateCustomerDto, Customer, CustomerSearchQuery, Order, PaginatedResponse, PaginationParams,
-    Seller, SellerSearchQuery, UpdateCustomerDto,
+    CreateCustomerDto, Customer, LocationSearchQuery, Order, PaginatedResponse, PaginationParams,
+    Seller, UpdateCustomerDto,
 };
 use crate::repositories::{CustomerRepository, OrderRepository, SellerRepository};
 
@@ -64,7 +64,7 @@ impl CustomerService {
     #[instrument(skip(self))]
     pub async fn get_customers(
         &self,
-        query: CustomerSearchQuery,
+        query: LocationSearchQuery,
     ) -> AppResult<PaginatedResponse<Customer>> {
         let pagination = query.pagination();
         let filter = query.filter();
@@ -103,7 +103,7 @@ impl SellerService {
     #[instrument(skip(self))]
     pub async fn get_sellers(
         &self,
-        query: SellerSearchQuery,
+        query: LocationSearchQuery,
     ) -> AppResult<PaginatedResponse<Seller>> {
         let pagination = query.pagination();
         let filter = query.filter();
