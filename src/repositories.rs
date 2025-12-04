@@ -1,6 +1,6 @@
 use crate::models::{
-    CreateCustomerDto, Customer, CustomerFilter, Order, PaginationParams, Seller, SellerFilter,
-    UpdateCustomerDto,
+    CreateCustomerDto, CreateSellerDto, Customer, CustomerFilter, Order, PaginationParams, Seller,
+    SellerFilter, UpdateCustomerDto,
 };
 use async_trait::async_trait;
 use sqlx::{PgPool, Result as SqlxResult};
@@ -184,6 +184,7 @@ impl CustomerRepository for PgCustomerRepository {
 
 #[async_trait]
 pub trait SellerRepository: Send + Sync {
+    async fn create(&self, dto: CreateSellerDto) -> SqlxResult<Seller>;
     async fn find_all(
         &self,
         filter: &SellerFilter,
@@ -205,6 +206,31 @@ impl PgSellerRepository {
 
 #[async_trait]
 impl SellerRepository for PgSellerRepository {
+    async fn create(&self, dto: CreateSellerDto) -> SqlxResult<Seller> {
+        sqlx::query_as::<_, Seller>(
+            r#"
+            INSERT INTO sellers (
+                seller_id, seller_zip_code_prefix,
+                seller_city, seller_state
+            )
+            VALUES ($1, $2, $3, $4)
+            RETURNING
+                seller_id, seller_zip_code_prefix,
+                seller_city, seller_state
+            "#,
+        )
+        .bind(dto.seller_id)
+        .bind(dto.seller_zip_code_prefix)
+        .bind(dto.seller_city)
+        .bind(dto.seller_state)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| {
+            error!("Error creating seller: {:?}", e);
+            e
+        })
+    }
+
     async fn find_all(
         &self,
         filter: &SellerFilter,

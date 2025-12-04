@@ -6,8 +6,8 @@ use axum::{
 
 use crate::error::AppResult;
 use crate::models::{
-    CreateCustomerDto, Customer, LocationSearchQuery, Order, PaginatedResponse, PaginationParams,
-    Seller, UpdateCustomerDto,
+    CreateCustomerDto, CreateSellerDto, Customer, LocationSearchQuery, Order, PaginatedResponse,
+    PaginationParams, Seller, UpdateCustomerDto,
 };
 use crate::state::AppState;
 
@@ -52,6 +52,26 @@ pub async fn delete_customer_handler(
     Ok(StatusCode::NO_CONTENT)
 }
 
+pub async fn get_customer_orders_handler(
+    Path(id): Path<String>,
+    State(state): State<AppState>,
+    Query(pagination): Query<PaginationParams>,
+) -> AppResult<Json<PaginatedResponse<Order>>> {
+    let response = state
+        .order_service
+        .get_orders_by_customer(&id, &pagination)
+        .await?;
+    Ok(Json(response))
+}
+
+pub async fn create_seller_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<CreateSellerDto>,
+) -> AppResult<impl IntoResponse> {
+    let seller = state.seller_service.create_seller(payload).await?;
+    Ok((StatusCode::CREATED, Json(seller)))
+}
+
 pub async fn get_sellers_handler(
     State(state): State<AppState>,
     Query(query): Query<LocationSearchQuery>,
@@ -66,16 +86,4 @@ pub async fn get_seller_by_id_handler(
 ) -> AppResult<Json<Seller>> {
     let seller = state.seller_service.get_seller_by_id(&id).await?;
     Ok(Json(seller))
-}
-
-pub async fn get_customer_orders_handler(
-    Path(id): Path<String>,
-    State(state): State<AppState>,
-    Query(pagination): Query<PaginationParams>,
-) -> AppResult<Json<PaginatedResponse<Order>>> {
-    let response = state
-        .order_service
-        .get_orders_by_customer(&id, &pagination)
-        .await?;
-    Ok(Json(response))
 }

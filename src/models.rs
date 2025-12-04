@@ -28,21 +28,36 @@ impl PaginationParams {
     }
 }
 
+#[derive(Debug, Serialize)]
+pub struct PaginatedResponse<T> {
+    pub data: Vec<T>,
+    pub meta: PaginationMeta,
+}
+
+impl<T> PaginatedResponse<T> {
+    pub fn new(data: Vec<T>, count: i64, page: u32, page_size: u32) -> Self {
+        let total_pages = if count == 0 {
+            1
+        } else {
+            (count as f64 / page_size as f64).ceil() as u32
+        };
+
+        Self {
+            data,
+            meta: PaginationMeta {
+                total_records: count,
+                page,
+                page_size,
+                total_pages,
+            },
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Default)]
 pub struct LocationFilter {
     pub city: Option<String>,
     pub state: Option<String>,
-}
-
-pub type CustomerFilter = LocationFilter;
-pub type SellerFilter = LocationFilter;
-
-#[derive(Debug, FromRow, Serialize, Clone)]
-pub struct Seller {
-    pub seller_id: String,
-    pub seller_zip_code_prefix: String,
-    pub seller_city: String,
-    pub seller_state: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -69,31 +84,8 @@ impl LocationSearchQuery {
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct PaginatedResponse<T> {
-    pub data: Vec<T>,
-    pub meta: PaginationMeta,
-}
-
-impl<T> PaginatedResponse<T> {
-    pub fn new(data: Vec<T>, count: i64, page: u32, page_size: u32) -> Self {
-        let total_pages = if count == 0 {
-            1
-        } else {
-            (count as f64 / page_size as f64).ceil() as u32
-        };
-
-        Self {
-            data,
-            meta: PaginationMeta {
-                total_records: count,
-                page,
-                page_size,
-                total_pages,
-            },
-        }
-    }
-}
+pub type CustomerFilter = LocationFilter;
+pub type SellerFilter = LocationFilter;
 
 #[derive(Debug, FromRow, Serialize, Clone)]
 pub struct Customer {
@@ -128,6 +120,26 @@ pub struct UpdateCustomerDto {
     pub customer_city: Option<String>,
     #[validate(length(min = 2, max = 2))]
     pub customer_state: Option<String>,
+}
+
+#[derive(Debug, FromRow, Serialize, Clone)]
+pub struct Seller {
+    pub seller_id: String,
+    pub seller_zip_code_prefix: String,
+    pub seller_city: String,
+    pub seller_state: String,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct CreateSellerDto {
+    #[validate(length(min = 1, message = "ID cannot be empty"))]
+    pub seller_id: String,
+    #[validate(length(min = 5, max = 10))]
+    pub seller_zip_code_prefix: String,
+    #[validate(length(min = 1))]
+    pub seller_city: String,
+    #[validate(length(min = 2, max = 2))]
+    pub seller_state: String,
 }
 
 #[derive(Debug, FromRow, Serialize, Clone)]

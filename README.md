@@ -111,20 +111,35 @@ cargo run
 The server will be available at http://127.0.0.1:3000/customers
 
 ### Usage Examples
+#### Create a new Customer
+Endpoint: POST
+
+  - `/customers`
+
+```bash
+curl -X POST http://localhost:3000/customers \
+  -H "Content-Type: application/json" \
+  -H "Origin: http://localhost:3000" \
+  -d '{    
+    "customer_id": "06b8999e2fba1a1fbc88172c00ba8bc7",
+    "customer_unique_id": "861eff4711a542e4b93843c6dd7febb0",
+    "customer_zip_code_prefix": "14409",
+    "customer_city": "franca",
+    "customer_state": "SP"
+  }'
+```
 
 #### Get all Customers
 Endpoint: GET 
 
-  - `GET /customers?city=Sao%20Paulo`
-  - `GET /customers?state=SP`
-  - `GET /customers?city=Rio%20de%20Janeiro&state=RJ&page=1&page_size=10`
-
+  - `/customers?city=Sao%20Paulo`
+  - `/customers?state=SP`
+  - `/customers?city=Rio%20de%20Janeiro&state=RJ&page=1&page_size=10`
 
 ```bash
 curl -X GET http://localhost:3000/customers?page=1&page_size=10 \
    -H "Content-Type: application/json"
    -H "Origin: http://localhost:3000"
-   
 ```
 
 ```json
@@ -139,8 +154,10 @@ curl -X GET http://localhost:3000/customers?page=1&page_size=10 \
 }
 ``` 
    
-#### Get a Customer
-Endpoint: `GET /customers/{id}`
+#### Get a Customer by ID
+Endpoint: GET
+
+  - `/customers/{id}`
 
 ```bash
 curl -X GET http://localhost:3000/customers/06b899... \

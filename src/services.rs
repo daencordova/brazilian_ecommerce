@@ -4,8 +4,8 @@ use validator::Validate;
 
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    CreateCustomerDto, Customer, LocationSearchQuery, Order, PaginatedResponse, PaginationParams,
-    Seller, UpdateCustomerDto,
+    CreateCustomerDto, CreateSellerDto, Customer, LocationSearchQuery, Order, PaginatedResponse,
+    PaginationParams, Seller, UpdateCustomerDto,
 };
 use crate::repositories::{CustomerRepository, OrderRepository, SellerRepository};
 
@@ -90,6 +90,12 @@ pub struct SellerService {
 impl SellerService {
     pub fn new(repository: Arc<dyn SellerRepository>) -> Self {
         Self { repository }
+    }
+
+    #[instrument(skip(self))]
+    pub async fn create_seller(&self, dto: CreateSellerDto) -> AppResult<Seller> {
+        dto.validate()?;
+        Ok(self.repository.create(dto).await?)
     }
 
     #[instrument(skip(self))]
