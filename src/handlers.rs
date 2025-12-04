@@ -59,3 +59,11 @@ pub async fn get_sellers_handler(
     let response = state.seller_service.get_sellers(query).await?;
     Ok(Json(response))
 }
+
+pub async fn get_seller_by_id_handler(
+    Path(id): Path<String>,
+    State(state): State<AppState>,
+) -> AppResult<Json<Seller>> {
+    let seller = state.seller_service.get_seller_by_id(&id).await?;
+    Ok(Json(seller))
+}

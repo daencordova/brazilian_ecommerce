@@ -189,6 +189,7 @@ pub trait SellerRepository: Send + Sync {
         filter: &SellerFilter,
         pagination: &PaginationParams,
     ) -> SqlxResult<(Vec<Seller>, i64)>;
+    async fn find_by_id(&self, id: &str) -> SqlxResult<Option<Seller>>;
 }
 
 #[derive(Clone)]
@@ -253,5 +254,23 @@ impl SellerRepository for PgSellerRepository {
         })?;
 
         Ok((sellers, total_count))
+    }
+
+    async fn find_by_id(&self, id: &str) -> SqlxResult<Option<Seller>> {
+        sqlx::query_as::<_, Seller>(
+            r#"
+            SELECT
+                seller_id, seller_zip_code_prefix,
+                seller_city, seller_state
+            FROM sellers WHERE seller_id = $1
+            "#,
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| {
+            error!("Error fetching seller by id: {:?}", e);
+            e
+        })
     }
 }

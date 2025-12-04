@@ -93,6 +93,14 @@ impl SellerService {
     }
 
     #[instrument(skip(self))]
+    pub async fn get_seller_by_id(&self, id: &str) -> AppResult<Seller> {
+        match self.repository.find_by_id(id).await? {
+            Some(seller) => Ok(seller),
+            None => Err(AppError::NotFound),
+        }
+    }
+
+    #[instrument(skip(self))]
     pub async fn get_sellers(
         &self,
         query: SellerSearchQuery,
