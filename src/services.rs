@@ -4,8 +4,8 @@ use validator::Validate;
 
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    CreateCustomerDto, CreateSellerDto, Customer, LocationSearchQuery, Order, PaginatedResponse,
-    PaginationParams, Seller, UpdateCustomerDto,
+    CreateCustomerDto, CreateOrderDto, CreateSellerDto, Customer, LocationSearchQuery, Order,
+    OrderSearchQuery, PaginatedResponse, PaginationParams, Seller, UpdateCustomerDto,
 };
 use crate::repositories::{CustomerRepository, OrderRepository, SellerRepository};
 
@@ -134,6 +134,36 @@ pub struct OrderService {
 impl OrderService {
     pub fn new(repository: Arc<dyn OrderRepository>) -> Self {
         Self { repository }
+    }
+
+    #[instrument(skip(self))]
+    pub async fn create_order(&self, dto: CreateOrderDto) -> AppResult<Order> {
+        dto.validate()?;
+        Ok(self.repository.create(dto).await?)
+    }
+
+    #[instrument(skip(self))]
+    pub async fn get_order_by_id(&self, id: &str) -> AppResult<Order> {
+        match self.repository.find_by_id(id).await? {
+            Some(order) => Ok(order),
+            None => Err(AppError::NotFound),
+        }
+    }
+
+    #[instrument(skip(self))]
+    pub async fn get_orders(&self, query: OrderSearchQuery) -> AppResult<PaginatedResponse<Order>> {
+        let pagination = query.pagination();
+        let filter = query.filter();
+        let (_, _, page, page_size) = pagination.normalize();
+
+        let (orders, total_records) = self.repository.find_all(&filter, &pagination).await?;
+
+        Ok(PaginatedResponse::new(
+            orders,
+            total_records,
+            page,
+            page_size,
+        ))
     }
 
     #[instrument(skip(self))]

@@ -19,9 +19,10 @@ use tracing::info;
 use crate::config::{create_cors_layer, load_config};
 use crate::error::AppError;
 use crate::handlers::{
-    create_customer_handler, create_seller_handler, delete_customer_handler,
+    create_customer_handler, create_order_handler, create_seller_handler, delete_customer_handler,
     get_customer_by_id_handler, get_customer_orders_handler, get_customers_handler,
-    get_seller_by_id_handler, get_sellers_handler, update_customer_handler,
+    get_order_by_id_handler, get_orders_handler, get_seller_by_id_handler, get_sellers_handler,
+    update_customer_handler,
 };
 use crate::repositories::{PgCustomerRepository, PgOrderRepository, PgSellerRepository};
 use crate::services::{CustomerService, OrderService, SellerService};
@@ -74,6 +75,9 @@ async fn main() -> std::result::Result<(), AppError> {
         .route("/sellers", post(create_seller_handler))
         .route("/sellers", get(get_sellers_handler))
         .route("/sellers/{id}", get(get_seller_by_id_handler))
+        .route("/orders", post(create_order_handler))
+        .route("/orders", get(get_orders_handler))
+        .route("/orders/{id}", get(get_order_by_id_handler))
         .with_state(app_state)
         .layer(cors_layer);
 

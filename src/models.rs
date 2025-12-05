@@ -153,3 +153,45 @@ pub struct Order {
     pub order_delivered_customer_date: Option<chrono::NaiveDateTime>,
     pub order_estimated_delivery_date: chrono::NaiveDateTime,
 }
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct CreateOrderDto {
+    #[validate(length(min = 1))]
+    pub order_id: String,
+    #[validate(length(min = 1))]
+    pub customer_id: String,
+    #[validate(length(min = 1))]
+    pub order_status: String,
+    pub order_purchase_timestamp: chrono::NaiveDateTime,
+    pub order_approved_at: chrono::NaiveDateTime,
+    pub order_delivered_carrier_date: Option<chrono::NaiveDateTime>,
+    pub order_delivered_customer_date: Option<chrono::NaiveDateTime>,
+    pub order_estimated_delivery_date: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct OrderFilter {
+    pub order_status: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OrderSearchQuery {
+    pub page: Option<u32>,
+    pub page_size: Option<u32>,
+    pub order_status: Option<String>,
+}
+
+impl OrderSearchQuery {
+    pub fn pagination(&self) -> PaginationParams {
+        PaginationParams {
+            page: self.page,
+            page_size: self.page_size,
+        }
+    }
+
+    pub fn filter(&self) -> OrderFilter {
+        OrderFilter {
+            order_status: self.order_status.clone(),
+        }
+    }
+}

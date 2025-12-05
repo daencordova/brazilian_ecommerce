@@ -1,6 +1,6 @@
 use crate::models::{
-    CreateCustomerDto, CreateSellerDto, Customer, CustomerFilter, Order, PaginationParams, Seller,
-    SellerFilter, UpdateCustomerDto,
+    CreateCustomerDto, CreateOrderDto, CreateSellerDto, Customer, CustomerFilter, Order,
+    OrderFilter, PaginationParams, Seller, SellerFilter, UpdateCustomerDto,
 };
 use async_trait::async_trait;
 use sqlx::{PgPool, Result as SqlxResult};
@@ -303,6 +303,13 @@ impl SellerRepository for PgSellerRepository {
 
 #[async_trait]
 pub trait OrderRepository: Send + Sync {
+    async fn create(&self, dto: CreateOrderDto) -> SqlxResult<Order>;
+    async fn find_all(
+        &self,
+        filter: &OrderFilter,
+        pagination: &PaginationParams,
+    ) -> SqlxResult<(Vec<Order>, i64)>;
+    async fn find_by_id(&self, id: &str) -> SqlxResult<Option<Order>>;
     async fn find_by_customer_id(
         &self,
         customer_id: &str,
@@ -323,6 +330,107 @@ impl PgOrderRepository {
 
 #[async_trait]
 impl OrderRepository for PgOrderRepository {
+    async fn create(&self, dto: CreateOrderDto) -> SqlxResult<Order> {
+        sqlx::query_as::<_, Order>(
+            r#"
+            INSERT INTO orders (
+                order_id, customer_id, order_status,
+                order_purchase_timestamp, order_approved_at,
+                order_delivered_carrier_date, order_delivered_customer_date,
+                order_estimated_delivery_date
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING
+                order_id, customer_id, order_status,
+                order_purchase_timestamp, order_approved_at,
+                order_delivered_carrier_date, order_delivered_customer_date,
+                order_estimated_delivery_date
+            "#,
+        )
+        .bind(dto.order_id)
+        .bind(dto.customer_id)
+        .bind(dto.order_status)
+        .bind(dto.order_purchase_timestamp)
+        .bind(dto.order_approved_at)
+        .bind(dto.order_delivered_carrier_date)
+        .bind(dto.order_delivered_customer_date)
+        .bind(dto.order_estimated_delivery_date)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error creating order: {:?}", e);
+            e
+        })
+    }
+
+    async fn find_all(
+        &self,
+        filter: &OrderFilter,
+        pagination: &PaginationParams,
+    ) -> SqlxResult<(Vec<Order>, i64)> {
+        let (limit, offset, _, _) = pagination.normalize();
+
+        let count_row: (i64,) = sqlx::query_as(
+            r#"
+            SELECT COUNT(*) FROM orders
+            WHERE ($1::text IS NULL OR order_status = $1)
+            "#,
+        )
+        .bind(&filter.order_status)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error counting orders: {:?}", e);
+            e
+        })?;
+        let total_count = count_row.0;
+
+        let orders = sqlx::query_as::<_, Order>(
+            r#"
+            SELECT
+                order_id, customer_id, order_status,
+                order_purchase_timestamp, order_approved_at,
+                order_delivered_carrier_date, order_delivered_customer_date,
+                order_estimated_delivery_date
+            FROM orders
+            WHERE ($1::text IS NULL OR order_status = $1)
+            ORDER BY order_purchase_timestamp DESC
+            LIMIT $2 OFFSET $3
+            "#,
+        )
+        .bind(&filter.order_status)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error fetching orders: {:?}", e);
+            e
+        })?;
+
+        Ok((orders, total_count))
+    }
+
+    async fn find_by_id(&self, id: &str) -> SqlxResult<Option<Order>> {
+        sqlx::query_as::<_, Order>(
+            r#"
+            SELECT
+                order_id, customer_id, order_status,
+                order_purchase_timestamp, order_approved_at,
+                order_delivered_carrier_date, order_delivered_customer_date,
+                order_estimated_delivery_date
+            FROM orders WHERE order_id = $1
+            "#,
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error fetching order by id: {:?}", e);
+            e
+        })
+    }
+
     async fn find_by_customer_id(
         &self,
         customer_id: &str,
