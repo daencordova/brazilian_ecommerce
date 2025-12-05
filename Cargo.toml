@@ -38,3 +38,9 @@ tower-http = { version = "0.6.7", features = ["cors"] }
 
 # HTTP
 http = "1.0"
+
+# HTTP Client
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# CSV
+csv = "1.3"

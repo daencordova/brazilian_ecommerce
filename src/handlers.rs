@@ -4,7 +4,9 @@ use axum::{
     response::{IntoResponse, Json},
 };
 
-use crate::error::AppResult;
+use tracing::error;
+
+use crate::error::{AppError, AppResult};
 use crate::models::{
     CreateCustomerDto, CreateOrderDto, CreateSellerDto, Customer, LocationSearchQuery, Order,
     OrderSearchQuery, PaginatedResponse, PaginationParams, Seller, UpdateCustomerDto,
@@ -110,4 +112,60 @@ pub async fn get_order_by_id_handler(
 ) -> AppResult<Json<Order>> {
     let order = state.order_service.get_order_by_id(&id).await?;
     Ok(Json(order))
+}
+
+pub async fn load_customers_from_csv_handler() -> AppResult<impl IntoResponse> {
+    let file_path = "data/olist_customers_dataset.csv";
+    let mut rdr = csv::Reader::from_path(file_path).map_err(|e| {
+        error!("Failed to open CSV file: {}", e);
+        AppError::ConfigError(format!("Failed to open CSV file: {}", e))
+    })?;
+
+    let client = reqwest::Client::new();
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let url = format!("http://localhost:{}/customers", port);
+
+    let mut success_count = 0;
+    let mut error_count = 0;
+
+    for result in rdr.deserialize() {
+        let record: CreateCustomerDto = match result {
+            Ok(r) => r,
+            Err(e) => {
+                error!("Failed to parse CSV record: {}", e);
+                error_count += 1;
+                continue;
+            }
+        };
+
+        let res = client.post(&url).json(&record).send().await;
+
+        match res {
+            Ok(response) => {
+                if response.status().is_success() {
+                    success_count += 1;
+                } else {
+                    error!(
+                        "Failed to create customer {:?}: status={}",
+                        record.customer_id,
+                        response.status()
+                    );
+                    error_count += 1;
+                }
+            }
+            Err(e) => {
+                error!(
+                    "Failed to send request for customer {:?}: {}",
+                    record.customer_id, e
+                );
+                error_count += 1;
+            }
+        }
+    }
+
+    Ok(Json(serde_json::json!({
+        "message": "Data load processed",
+        "success_count": success_count,
+        "error_count": error_count
+    })))
 }

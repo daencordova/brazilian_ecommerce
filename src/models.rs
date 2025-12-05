@@ -96,7 +96,7 @@ pub struct Customer {
     pub customer_state: String,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct CreateCustomerDto {
     #[validate(length(min = 1, message = "ID cannot be empty"))]
     pub customer_id: String,

@@ -15,6 +15,7 @@ pub enum AppError {
     ConfigError(String),
     ValidationError(validator::ValidationErrors),
     NoChangesToUpdate,
+    AlreadyExists(String),
 }
 
 impl From<sqlx::Error> for AppError {
@@ -46,6 +47,7 @@ impl IntoResponse for AppError {
                 StatusCode::BAD_REQUEST,
                 "No valid fields provided for update.".to_string(),
             ),
+            AppError::AlreadyExists(msg) => (StatusCode::CONFLICT, msg.clone()),
             AppError::DatabaseError(e) => {
                 error!("Database Error: {:?}", e);
                 (

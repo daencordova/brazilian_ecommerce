@@ -22,7 +22,18 @@ impl CustomerService {
     #[instrument(skip(self))]
     pub async fn create_customer(&self, dto: CreateCustomerDto) -> AppResult<Customer> {
         dto.validate()?;
-        Ok(self.repository.create(dto).await?)
+        self.repository.create(dto).await.map_err(|e| {
+            if let sqlx::Error::Database(db_err) = &e {
+                if db_err.code().as_deref() == Some("23505") {
+                    if db_err.constraint() == Some("customers_pkey") {
+                        return AppError::AlreadyExists(
+                            "Customer with this ID already exists".to_string(),
+                        );
+                    }
+                }
+            }
+            AppError::DatabaseError(e)
+        })
     }
 
     #[instrument(skip(self))]
