@@ -130,7 +130,7 @@ pub struct Seller {
     pub seller_state: String,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct CreateSellerDto {
     #[validate(length(min = 1, message = "ID cannot be empty"))]
     pub seller_id: String,
@@ -154,7 +154,7 @@ pub struct Order {
     pub order_estimated_delivery_date: chrono::NaiveDateTime,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct CreateOrderDto {
     #[validate(length(min = 1))]
     pub order_id: String,

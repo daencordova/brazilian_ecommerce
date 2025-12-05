@@ -22,7 +22,7 @@ use crate::handlers::{
     create_customer_handler, create_order_handler, create_seller_handler, delete_customer_handler,
     get_customer_by_id_handler, get_customer_orders_handler, get_customers_handler,
     get_order_by_id_handler, get_orders_handler, get_seller_by_id_handler, get_sellers_handler,
-    load_customers_from_csv_handler, update_customer_handler,
+    load_data_from_csv_handler, update_customer_handler,
 };
 use crate::repositories::{PgCustomerRepository, PgOrderRepository, PgSellerRepository};
 use crate::services::{CustomerService, OrderService, SellerService};
@@ -66,7 +66,7 @@ async fn main() -> std::result::Result<(), AppError> {
     };
 
     let app = Router::new()
-        .route("/load-customers", post(load_customers_from_csv_handler))
+        .route("/load-data", post(load_data_from_csv_handler))
         .route("/customers", post(create_customer_handler))
         .route("/customers", get(get_customers_handler))
         .route("/customers/{id}", get(get_customer_by_id_handler))

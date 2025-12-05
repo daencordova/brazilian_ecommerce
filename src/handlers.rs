@@ -4,6 +4,7 @@ use axum::{
     response::{IntoResponse, Json},
 };
 
+use serde::{Serialize, de::DeserializeOwned};
 use tracing::error;
 
 use crate::error::{AppError, AppResult};
@@ -114,31 +115,78 @@ pub async fn get_order_by_id_handler(
     Ok(Json(order))
 }
 
-pub async fn load_customers_from_csv_handler() -> AppResult<impl IntoResponse> {
-    let file_path = "data/olist_customers_dataset.csv";
-    let mut rdr = csv::Reader::from_path(file_path).map_err(|e| {
-        error!("Failed to open CSV file: {}", e);
-        AppError::ConfigError(format!("Failed to open CSV file: {}", e))
-    })?;
-
+pub async fn load_data_from_csv_handler() -> AppResult<impl IntoResponse> {
     let client = reqwest::Client::new();
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
-    let url = format!("http://localhost:{}/customers", port);
+    let base_url = format!("http://localhost:{}", port);
+
+    let mut total_success = 0;
+    let mut total_error = 0;
+
+    // Load Customers
+    let (success, error) = load_csv_data::<CreateCustomerDto>(
+        &client,
+        &format!("{}/customers", base_url),
+        "data/olist_customers_dataset.csv",
+    )
+    .await?;
+    total_success += success;
+    total_error += error;
+
+    // Load Sellers
+    let (success, error) = load_csv_data::<CreateSellerDto>(
+        &client,
+        &format!("{}/sellers", base_url),
+        "data/olist_sellers_dataset.csv",
+    )
+    .await?;
+    total_success += success;
+    total_error += error;
+
+    // Load Orders
+    let (success, error) = load_csv_data::<CreateOrderDto>(
+        &client,
+        &format!("{}/orders", base_url),
+        "data/olist_orders_dataset.csv",
+    )
+    .await?;
+    total_success += success;
+    total_error += error;
+
+    Ok(Json(serde_json::json!({
+        "message": "Data load processed",
+        "success_count": total_success,
+        "error_count": total_error
+    })))
+}
+
+async fn load_csv_data<T>(
+    client: &reqwest::Client,
+    url: &str,
+    file_path: &str,
+) -> AppResult<(usize, usize)>
+where
+    T: DeserializeOwned + Serialize,
+{
+    let mut rdr = csv::Reader::from_path(file_path).map_err(|e| {
+        error!("Failed to open CSV file {}: {}", file_path, e);
+        AppError::ConfigError(format!("Failed to open CSV file: {}", e))
+    })?;
 
     let mut success_count = 0;
     let mut error_count = 0;
 
     for result in rdr.deserialize() {
-        let record: CreateCustomerDto = match result {
+        let record: T = match result {
             Ok(r) => r,
             Err(e) => {
-                error!("Failed to parse CSV record: {}", e);
+                error!("Failed to parse CSV record in {}: {}", file_path, e);
                 error_count += 1;
                 continue;
             }
         };
 
-        let res = client.post(&url).json(&record).send().await;
+        let res = client.post(url).json(&record).send().await;
 
         match res {
             Ok(response) => {
@@ -146,8 +194,8 @@ pub async fn load_customers_from_csv_handler() -> AppResult<impl IntoResponse> {
                     success_count += 1;
                 } else {
                     error!(
-                        "Failed to create customer {:?}: status={}",
-                        record.customer_id,
+                        "Failed to create record from {}: status={}",
+                        file_path,
                         response.status()
                     );
                     error_count += 1;
@@ -155,17 +203,12 @@ pub async fn load_customers_from_csv_handler() -> AppResult<impl IntoResponse> {
             }
             Err(e) => {
                 error!(
-                    "Failed to send request for customer {:?}: {}",
-                    record.customer_id, e
+                    "Failed to send request for record from {}: {}",
+                    file_path, e
                 );
                 error_count += 1;
             }
         }
     }
-
-    Ok(Json(serde_json::json!({
-        "message": "Data load processed",
-        "success_count": success_count,
-        "error_count": error_count
-    })))
+    Ok((success_count, error_count))
 }
